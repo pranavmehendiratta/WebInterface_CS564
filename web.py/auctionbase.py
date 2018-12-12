@@ -52,9 +52,15 @@ def render_template(template_name, **context):
 
 urls = ('/currtime', 'curr_time',
         '/selecttime', 'select_time',
+        '/', 'index'
         # TODO: add additional URLs here
         # first parameter => URL, second parameter => class name
         )
+
+
+class index:
+    def GET(self):
+        return render_template('app_base.html')
 
 class curr_time:
     # A simple GET request, to '/currtime'
