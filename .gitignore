@@ -1,2 +1,4 @@
 ./create_auctionbase/*
 ./ebay_data/*
+AuctionBase_original
+*.pyc
