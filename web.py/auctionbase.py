@@ -7,6 +7,7 @@ import web
 import sqlitedb
 from jinja2 import Environment, FileSystemLoader
 from datetime import datetime
+import pprint #delete
 
 ###########################################################################################
 ##########################DO NOT CHANGE ANYTHING ABOVE THIS LINE!##########################
@@ -72,6 +73,7 @@ class curr_time:
         return render_template('curr_time.html', time = current_time)
 
 class select_time:
+
     # Aanother GET request, this time to the URL '/selecttime'
     def GET(self):
         return render_template('select_time.html')
@@ -81,6 +83,7 @@ class select_time:
     # You can fetch the parameters passed to the URL
     # by calling `web.input()' for **both** POST requests
     # and GET requests
+
     def POST(self):
         post_params = web.input()
         MM = post_params['MM']
@@ -91,14 +94,39 @@ class select_time:
         ss = post_params['ss'];
         enter_name = post_params['entername']
 
-
         selected_time = '%s-%s-%s %s:%s:%s' % (yyyy, MM, dd, HH, mm, ss)
         update_message = '(Hello, %s. Previously selected time was: %s.)' % (enter_name, selected_time)
+
         # TODO: save the selected time as the current time in the database
+        # 1. Delete the current time
+        delResult = self.deleteCurrentTime();
+        print("delResult is")
+        pprint.pprint(delResult)
+
+        # 2. add a new current time
+        result = self.addCurrTime(selected_time)
+
+        print("result is")
+        pprint.pprint(result)
+        print("update_message: " + update_message)
 
         # Here, we assign `update_message' to `message', which means
         # we'll refer to it in our template as `message'
         return render_template('select_time.html', message = update_message)
+
+    # Will delete the current time from the currtime table
+    def deleteCurrentTime(self):
+        current_time = sqlitedb.getTime()
+        query_string = 'delete from currenttime where time = $currenttime'
+        result = sqlitedb.executeQuery(query_string, {'currenttime': current_time})
+        return result
+
+    def addCurrTime(self, newCurrTime):
+        print("newCurrTime in addCurrTime():" + newCurrTime)
+        query_string = 'insert into currenttime values ($time)'
+        result = sqlitedb.executeQuery(query_string, {'time': newCurrTime})
+        return result
+
 
 ###########################################################################################
 ##########################DO NOT CHANGE ANYTHING BELOW THIS LINE!##########################
