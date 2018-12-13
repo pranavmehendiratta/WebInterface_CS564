@@ -1,7 +1,8 @@
 import web
+import pprint
 
 db = web.database(dbn='sqlite',
-        db='[YOUR SQLite DATABASE FILENAME]' #TODO: add your SQLite database filename
+        db='AuctionBase'
     )
 
 ######################BEGIN HELPER METHODS######################
@@ -30,13 +31,19 @@ def transaction():
 
 # returns the current time from your database
 def getTime():
-    # TODO: update the query string to match
+    # This is done
+    # update the query string to match
     # the correct column and table name in your database
-    query_string = 'select currenttime from Time'
+    query_string = 'select time from currenttime'
     results = query(query_string)
+
+    #for result in results:
+    #    pprint.pprint(result)
+    #print("current time: " + results[0].Time)
+
     # alternatively: return results[0]['currenttime']
-    return results[0].currenttime # TODO: update this as well to match the
-                                  # column name
+    # update this as well to match the - this is also done
+    return results[0].Time # column name
 
 # returns a single item specified by the Item's ID in the database
 # Note: if the `result' list is empty (i.e. there are no items for a
