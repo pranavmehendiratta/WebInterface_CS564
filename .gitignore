@@ -2,3 +2,4 @@
 ./ebay_data/*
 AuctionBase_original
 *.pyc
+AuctionBase
