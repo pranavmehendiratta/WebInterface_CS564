@@ -15,6 +15,9 @@ import pprint #delete
 
 ######################BEGIN HELPER METHODS######################
 
+# Constant values
+EMPTY_STRING = ""
+
 # helper method to convert times from database (which will return a string)
 # into datetime objects. This will allow you to compare times correctly (using
 # ==, !=, <, >, etc.) instead of lexicographically as strings.
@@ -51,17 +54,127 @@ def render_template(template_name, **context):
 
 #####################END HELPER METHODS#####################
 
-urls = ('/currtime', 'curr_time',
-        '/selecttime', 'select_time',
-        '/', 'index'
-        # TODO: add additional URLs here
-        # first parameter => URL, second parameter => class name
-        )
-
+# URL mapping for the navigation bar till. Need to figure out what to do
+# to the index.html url. It does not show anything as of yet.
+urls = (
+    # TODO: add additional URLs here
+    # first parameter => URL, second parameter => class name
+    '/currtime', 'curr_time',
+    '/selecttime', 'select_time',
+    '/', 'index',
+    '/add_bid', 'add_bid'
+)
 
 class index:
     def GET(self):
         return render_template('app_base.html')
+
+class add_bid:
+    def GET(self):
+        return render_template('add_bid.html')
+
+    def POST(self):
+        post_params = web.input()
+        itemID = post_params['itemID']
+        userID = post_params['userID']
+        price = post_params['price']
+        retObj = self.tryAddingBid(itemID, userID, price)
+
+        #print("This is dummy message. itemID: " + itemID + ", userID: " + userID + ",  price: " + price)
+        #update_message = '(This is dummy message. itemID: %s, userID: %s,  price: %s)' % (itemID, userID, price)
+
+        # Replacing dummy msg with something that makes sense
+        print("retObj:")
+        pprint.pprint(retObj)
+        update_message = retObj["msg"]
+
+        # Here, we assign `update_message' to `message', which means
+        # we'll refer to it in our template as `message'
+        return render_template('add_bid.html', message = update_message)
+
+    def tryAddingBid(self, itemID, userID, price):
+        retObj = self.validateInput(itemID, userID, price)
+
+        if retObj["error"]:
+            return retObj
+
+        transaction = sqlitedb.transaction()
+        try:
+            query_string = 'INSERT INTO BIDS VALUES ($itemID, $userID, $price, $currtime)'
+
+            values = {
+                'itemID': itemID,
+                'userID': userID,
+                'price': price,
+                'currtime': sqlitedb.getTime()
+            }
+            sqlitedb.executeQuery(query_string, values)
+
+        except Exception as e:
+            transaction.rollback()
+            print(str(e))
+            return self.createReturnObject(True, str(e))
+        else:
+            transaction.commit()
+
+    def validateInput(self, itemID, userID, price):
+        # Check if any of the inputs are None or empty string
+        if itemID is None:
+            msg = "itemID is None. itemID needs to be an integer"
+            return self.createReturnObject(True, msg)
+
+        if userID is None:
+            msg = "userID is None. userID cannot be empty"
+            return self.createReturnObject(True, msg)
+
+        if price is None:
+            msg = "price is None. price needs to be a real value"
+            return self.createReturnObject(True, msg)
+
+        if itemID == EMPTY_STRING:
+            msg = "itemID is an empty string. itemID needs to be an integer"
+            return self.createReturnObject(True, msg)
+
+        if userID == EMPTY_STRING:
+            msg = "userID is an empty string. userID cannot be empty"
+            return self.createReturnObject(True, msg)
+
+        if price == EMPTY_STRING:
+            msg = "price is an empty. price needs to be a real value"
+            return self.createReturnObject(True, msg)
+
+        # check if itemID is an integer
+        try:
+            itemID = int(itemID)
+        except:
+            msg = "itemID = " + itemID + " is incorrect. itemID needs to be an integer"
+            return self.createReturnObject(True, msg)
+
+        # check if price is either float or integer
+        if "." not in price:
+            print("price is of int type")
+            try:
+                price = int(price)
+            except:
+                msg = "price = " + price + " is incorrect. price needs to be either float or int"
+                return self.createReturnObject(True, msg)
+        else:
+            print("price is of float type")
+            try:
+                price = float(price)
+            except:
+                msg = "price = " + price + " is incorrect. price needs to be either float or int"
+                return self.createReturnObject(True, msg)
+
+        return self.createReturnObject(False, "Inputs are valid")
+
+
+    def createReturnObject(self, error, msg):
+        retObj = dict()
+        retObj["error"] = error
+        retObj["msg"] = msg
+        return retObj
+
 
 class curr_time:
     # A simple GET request, to '/currtime'
@@ -73,7 +186,6 @@ class curr_time:
         return render_template('curr_time.html', time = current_time)
 
 class select_time:
-
     # Aanother GET request, this time to the URL '/selecttime'
     def GET(self):
         return render_template('select_time.html')
