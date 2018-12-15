@@ -73,7 +73,7 @@ def createReturnObject(error, msg):
     retObj["msg"] = msg
     return retObj
 
-def processError(error):
+def processTriggerErrors(error):
     trigger1 = re.compile(".*Trigger1_Failed.*", re.IGNORECASE)
     trigger2 = re.compile(".*Trigger2_Failed.*", re.IGNORECASE)
     trigger3 = re.compile(".*Trigger3_Failed.*", re.IGNORECASE)
@@ -90,24 +90,36 @@ def processError(error):
         return createReturnObject(True, "Some message")
 
     if trigger3.match(error):
-        return createReturnObject(True, "Some message")
+        return createReturnObject(True, "Any new bid for an item should be greater than previous currently")
 
+    # This error should never be thrown
     if trigger4.match(error):
-        return createReturnObject(True, "Some message")
+        return createReturnObject(True, "Unable to update bid count using trigger")
 
     if trigger5.match(error):
-        return createReturnObject(True, "Some message")
+        return createReturnObject(True, "Cannot bid on auction which is not started. Should not be displayed because this is handled differently.")
 
     if trigger6.match(error):
-        return createReturnObject(True, "Some message")
+        return createReturnObject(True, "Cannot bid on auction which is ended. Should not be displayed because this is handled differently.")
 
     if trigger7.match(error):
         return createReturnObject(True, "User cannot on the item he/she is selling")
 
+    # This error should never be thrown
     if trigger8.match(error):
-        return createReturnObject(True, "Current price should always match the most recent bid")
+        return createReturnObject(True, "Unable to update currently to most recent bid using trigger")
 
     return createReturnObject(False, "Process errors passed successfully")
+
+def processSQLErrors(error):
+    no2BidsAtSameTime = re.compile(",*UNIQUE constraint failed: Bids.ItemID, Bids.Time.*", re.IGNORECASE)
+
+    if no2BidsAtSameTime.match(error):
+        return createReturnObject(True, "Item cannot have 2 bids at the same time")
+
+
+    # if unable to figure out the error just throw it
+    return createReturnObject(True, error)
 
 def isItemPresent(itemID):
 
@@ -206,17 +218,14 @@ class add_bid:
         price = post_params['price']
         retObj = self.tryAddingBid(itemID, userID, price)
 
-        #print("This is dummy message. itemID: " + itemID + ", userID: " + userID + ",  price: " + price)
-        #update_message = '(This is dummy message. itemID: %s, userID: %s,  price: %s)' % (itemID, userID, price)
-
         # Replacing dummy msg with something that makes sense
         print("retObj:")
         pprint.pprint(retObj)
-        update_message = retObj["msg"]
 
-        # Here, we assign `update_message' to `message', which means
-        # we'll refer to it in our template as `message'
-        return render_template('add_bid.html', message = update_message)
+        if retObj["error"]:
+            return render_template('add_bid.html', message = retObj["msg"])
+        else:
+            return render_template('add_bid.html', add_result = retObj["msg"])
 
     def tryAddingBid(self, itemID, userID, price):
 
@@ -255,10 +264,15 @@ class add_bid:
         except Exception as e:
             transaction.rollback()
             print(str(e))
-            return processError(str(e))
-            #return createReturnObject(True, str(e.args))
+            triggerErrors = processTriggerErrors(str(e))
+
+            if (triggerErrors["error"]):
+                return triggerErrors
+
+            return processSQLErrors(str(e))
         else:
             transaction.commit()
+            return createReturnObject(False, "Bid successfully placed")
 
 
 
