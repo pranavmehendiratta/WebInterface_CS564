@@ -14,10 +14,9 @@ import pprint #delete
 ###########################################################################################
 
 ######################BEGIN HELPER METHODS######################
+import re
 
 # Constant values
-EMPTY_STRING = ""
-
 # helper method to convert times from database (which will return a string)
 # into datetime objects. This will allow you to compare times correctly (using
 # ==, !=, <, >, etc.) instead of lexicographically as strings.
@@ -62,12 +61,116 @@ urls = (
     '/currtime', 'curr_time',
     '/selecttime', 'select_time',
     '/', 'index',
-    '/add_bid', 'add_bid'
+    '/add_bid', 'add_bid',
+    '/search', 'search'
 )
+#Constants
+EMPTY_STRING = ""
+
+def createReturnObject(error, msg):
+    retObj = dict()
+    retObj["error"] = error
+    retObj["msg"] = msg
+    return retObj
+
+def processError(error):
+    trigger1 = re.compile(".*Trigger1_Failed.*", re.IGNORECASE)
+    trigger2 = re.compile(".*Trigger2_Failed.*", re.IGNORECASE)
+    trigger3 = re.compile(".*Trigger3_Failed.*", re.IGNORECASE)
+    trigger4 = re.compile(".*Trigger4_Failed.*", re.IGNORECASE)
+    trigger5 = re.compile(".*Trigger5_Failed.*", re.IGNORECASE)
+    trigger6 = re.compile(".*Trigger6_Failed.*", re.IGNORECASE)
+    trigger7 = re.compile(".*Trigger7_Failed.*", re.IGNORECASE)
+    trigger8 = re.compile(".*Trigger8_Failed.*", re.IGNORECASE)
+
+    if trigger1.match(error):
+        return createReturnObject(True, "Some message")
+
+    if trigger2.match(error):
+        return createReturnObject(True, "Some message")
+
+    if trigger3.match(error):
+        return createReturnObject(True, "Some message")
+
+    if trigger4.match(error):
+        return createReturnObject(True, "Some message")
+
+    if trigger5.match(error):
+        return createReturnObject(True, "Some message")
+
+    if trigger6.match(error):
+        return createReturnObject(True, "Some message")
+
+    if trigger7.match(error):
+        return createReturnObject(True, "User cannot on the item he/she is selling")
+
+    if trigger8.match(error):
+        return createReturnObject(True, "Current price should always match the most recent bid")
+
+    return createReturnObject(False, "Process errors passed successfully")
+
+def isItemPresent(itemID):
+
+    retObj = None
+
+    query_string = 'SELECT * FROM ITEMS WHERE ITEMID = $itemID'
+    values = {
+        'itemID' : itemID
+    }
+
+    result = sqlitedb.query(query_string, values)
+
+    if len(result) == 0:
+        retObj = createReturnObject(True, "Item does not exists in the database")
+    else:
+        retObj = createReturnObject(False, "Item exists in the database")
+
+    return retObj
+
+def isAuctionOpenForItem(itemID):
+    print("Inside is bid is open")
+    query_string = 'SELECT Started, ends, Buy_Price, Currently FROM ITEMS WHERE ItemID = $itemID'
+
+    values = {
+        'itemID': itemID
+    }
+
+    result = sqlitedb.query(query_string, values)
+
+    print("result length is " + str(len(result)))
+
+    started = string_to_time(result[0].Started)
+    ends = string_to_time(result[0].Ends)
+    buy_price = result[0].Buy_Price
+    currently = result[0].Currently
+    currTime = string_to_time(sqlitedb.getTime())
+
+    print("currTime: " + str(currTime) + ", startTime: " + str(started) + ", endTime: " + str(ends))
+    print("buy_price: " + str(buy_price) + ", currently: " + str(currently))
+
+    if started > currTime:
+        return createReturnObject(True, "Cannot bid on an item whose auction has not started yet")
+
+    if ends < currTime:
+        return createReturnObject(True, "Cannot bid on an item whose auction has closed")
+
+    # cannot check the condition if buy_price is reached or not if buy_price is None
+    if buy_price is not None:
+        # compare buy_price and currently here
+        buy_price = float(buy_price)
+        currently = float(currently)
+        if currently >= buy_price:
+            return createReturnObject(True, "This item is remove from bidding because buy_price is already been met")
+
+    return createReturnObject(False, "Item is open for bidding")
 
 class index:
     def GET(self):
         return render_template('app_base.html')
+
+class search:
+    def GET(self):
+        return render_template('search.html')
 
 class add_bid:
     def GET(self):
@@ -93,10 +196,20 @@ class add_bid:
         return render_template('add_bid.html', message = update_message)
 
     def tryAddingBid(self, itemID, userID, price):
-        retObj = self.validateInput(itemID, userID, price)
+        inputResult = self.validateInput(itemID, userID, price)
 
-        if retObj["error"]:
-            return retObj
+        if inputResult["error"]:
+            return inputResult
+
+        itemResult = isItemPresent(itemID)
+
+        if itemResult["error"]:
+            return itemResult
+
+        bidOpen = isAuctionOpenForItem(itemID)
+
+        if bidOpen["error"]:
+            return bidOpen
 
         transaction = sqlitedb.transaction()
         try:
@@ -108,47 +221,51 @@ class add_bid:
                 'price': price,
                 'currtime': sqlitedb.getTime()
             }
-            sqlitedb.executeQuery(query_string, values)
+            sqlitedb.executeInsertionOrDeletionQuery(query_string, values)
 
         except Exception as e:
             transaction.rollback()
             print(str(e))
-            return self.createReturnObject(True, str(e))
+            return processError(str(e))
+            #return createReturnObject(True, str(e.args))
         else:
             transaction.commit()
+
+
+
 
     def validateInput(self, itemID, userID, price):
         # Check if any of the inputs are None or empty string
         if itemID is None:
             msg = "itemID is None. itemID needs to be an integer"
-            return self.createReturnObject(True, msg)
+            return createReturnObject(True, msg)
 
         if userID is None:
             msg = "userID is None. userID cannot be empty"
-            return self.createReturnObject(True, msg)
+            return createReturnObject(True, msg)
 
         if price is None:
             msg = "price is None. price needs to be a real value"
-            return self.createReturnObject(True, msg)
+            return createReturnObject(True, msg)
 
         if itemID == EMPTY_STRING:
             msg = "itemID is an empty string. itemID needs to be an integer"
-            return self.createReturnObject(True, msg)
+            return createReturnObject(True, msg)
 
         if userID == EMPTY_STRING:
             msg = "userID is an empty string. userID cannot be empty"
-            return self.createReturnObject(True, msg)
+            return createReturnObject(True, msg)
 
         if price == EMPTY_STRING:
             msg = "price is an empty. price needs to be a real value"
-            return self.createReturnObject(True, msg)
+            return createReturnObject(True, msg)
 
         # check if itemID is an integer
         try:
             itemID = int(itemID)
         except:
             msg = "itemID = " + itemID + " is incorrect. itemID needs to be an integer"
-            return self.createReturnObject(True, msg)
+            return createReturnObject(True, msg)
 
         # check if price is either float or integer
         if "." not in price:
@@ -157,23 +274,18 @@ class add_bid:
                 price = int(price)
             except:
                 msg = "price = " + price + " is incorrect. price needs to be either float or int"
-                return self.createReturnObject(True, msg)
+                return createReturnObject(True, msg)
         else:
             print("price is of float type")
             try:
                 price = float(price)
             except:
                 msg = "price = " + price + " is incorrect. price needs to be either float or int"
-                return self.createReturnObject(True, msg)
+                return createReturnObject(True, msg)
 
-        return self.createReturnObject(False, "Inputs are valid")
+        return createReturnObject(False, "Inputs are valid")
 
 
-    def createReturnObject(self, error, msg):
-        retObj = dict()
-        retObj["error"] = error
-        retObj["msg"] = msg
-        return retObj
 
 
 class curr_time:
@@ -230,13 +342,13 @@ class select_time:
     def deleteCurrentTime(self):
         current_time = sqlitedb.getTime()
         query_string = 'delete from currenttime where time = $currenttime'
-        result = sqlitedb.executeQuery(query_string, {'currenttime': current_time})
+        result = sqlitedb.executeInsertionOrDeletionQuery(query_string, {'currenttime': current_time})
         return result
 
     def addCurrTime(self, newCurrTime):
         print("newCurrTime in addCurrTime():" + newCurrTime)
         query_string = 'insert into currenttime values ($time)'
-        result = sqlitedb.executeQuery(query_string, {'time': newCurrTime})
+        result = sqlitedb.executeInsertionOrDeletionQuery(query_string, {'time': newCurrTime})
         return result
 
 
