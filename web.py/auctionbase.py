@@ -115,7 +115,7 @@ def isItemPresent(itemID):
 
     query_string = 'SELECT * FROM ITEMS WHERE ITEMID = $itemID'
     values = {
-        'itemID' : itemID
+        'itemID': itemID
     }
 
     result = sqlitedb.query(query_string, values)
@@ -127,8 +127,31 @@ def isItemPresent(itemID):
 
     return retObj
 
+def isUserPresent(userID):
+
+    retObj = None
+
+    query_string = 'SELECT * FROM USERS WHERE userID = $userID'
+    values = {
+        'userID': userID
+    }
+
+    result = sqlitedb.query(query_string, values)
+
+    if len(result) == 0:
+        retObj = createReturnObject(True, "User does not exists in the database")
+    else:
+        retObj = createReturnObject(False, "User exists in the database")
+
+    return retObj
+
+"""
+This check whether 
+1. currtime > started
+2. currtime < ends
+3. buy_price is not met yet
+"""
 def isAuctionOpenForItem(itemID):
-    print("Inside is bid is open")
     query_string = 'SELECT Started, ends, Buy_Price, Currently FROM ITEMS WHERE ItemID = $itemID'
 
     values = {
@@ -196,18 +219,24 @@ class add_bid:
         return render_template('add_bid.html', message = update_message)
 
     def tryAddingBid(self, itemID, userID, price):
-        inputResult = self.validateInput(itemID, userID, price)
 
+        # Check if inputs exists and are valid
+        inputResult = self.validateInput(itemID, userID, price)
         if inputResult["error"]:
             return inputResult
 
+        # Check if the itemID exists in the database
         itemResult = isItemPresent(itemID)
-
         if itemResult["error"]:
             return itemResult
 
-        bidOpen = isAuctionOpenForItem(itemID)
+        # check if the user exits in the database
+        userResult = isUserPresent(userID)
+        if userResult["error"]:
+            return userResult
 
+        # check if the bid is open
+        bidOpen = isAuctionOpenForItem(itemID)
         if bidOpen["error"]:
             return bidOpen
 
