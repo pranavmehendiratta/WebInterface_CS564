@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import sys; sys.path.insert(0, 'lib') # this line is necessary for the rest
+import sys;
+from unicodedata import category
+
+sys.path.insert(0, 'lib') # this line is necessary for the rest
 import os                             # of the imports to work!
 
 import web
@@ -62,7 +65,8 @@ urls = (
     '/selecttime', 'select_time',
     '/', 'index',
     '/add_bid', 'add_bid',
-    '/search', 'search'
+    '/search', 'search',
+    '/item_details', 'item_details'
 )
 #Constants
 EMPTY_STRING = ""
@@ -195,7 +199,7 @@ This check whether
 2. currtime < ends
 3. buy_price is not met yet
 """
-def isAuctionOpenForItem(itemID):
+def isAuctionClosedForItem(itemID):
     query_string = 'SELECT Started, ends, Buy_Price, Currently FROM ITEMS WHERE ItemID = $itemID'
 
     values = {
@@ -234,6 +238,68 @@ def isAuctionOpenForItem(itemID):
 class index:
     def GET(self):
         return render_template('app_base.html')
+
+
+class item_details:
+    def GET(self):
+        post_params = web.input()
+        itemID = dict(post_params)
+        pprint.pprint(itemID)
+        itemID = int(itemID["itemID"])
+        print("itemID: " + str(itemID))
+
+        values = {
+            'itemID': itemID
+        }
+
+        items_query = "SELECT * FROM Items WHERE ItemID = $itemID"
+        itemsResult = sqlitedb.query(items_query, values)
+        itemsResult = itemsResult[0]
+
+        categories_query = "SELECT Category FROM Categories WHERE ItemID = $itemID"
+        categoryResult = sqlitedb.query(categories_query, values)
+
+        bids_query = "SELECT UserID, Amount, Time FROM BIDS WHERE ItemID = $itemID"
+        bidsResult = sqlitedb.query(bids_query, values)
+
+        if len(categoryResult) != 0:
+            itemsResult['Category'] = categoryResult
+
+        if len(bidsResult) != 0:
+            itemsResult['Bids'] = bidsResult
+
+        started = string_to_time(str(itemsResult['Started']))
+        currtime = string_to_time(sqlitedb.getTime())
+
+        #print("started: " + str(started))
+        #print("ends: " + str(currtime))
+
+        status = dict()
+        if started > currtime:
+            status["Status"] = "Not Started"
+        else:
+            retObj = isAuctionClosedForItem(itemID)
+            if retObj["error"]:
+                status["Status"] = "Closed"
+                status["Winner"] = self.findWinner(bidsResult)
+            else:
+                status["Status"] = "Open"
+
+        itemsResult["Status"] = status
+
+
+        pprint.pprint(categoryResult)
+        return render_template('item_details.html', details = itemsResult)
+
+    def findWinner(self, bidsResult):
+        max = 0
+        winner = "None"
+        for bid in bidsResult:
+            print(bid)
+            if bid["Amount"] > max:
+                max = bid["Amount"]
+                winner = bid["UserID"]
+        return winner
 
 class search:
     def GET(self):
@@ -294,13 +360,13 @@ class search:
 
         if status != "all":
             if status == "open":
-                Where.append("I.Started > $currtime")
-                Where.append("I.Ends < $currtime")
+                Where.append("I.Started < $currtime")
+                Where.append("I.Ends > $currtime")
                 Where.append("I.Buy_Price > I.Currently")
             elif status == "close":
-                Where.append("(I.Ends < $currtime OR I.Buy_Price == I.Currently")
+                Where.append("((I.Ends < $currtime) OR (I.Started < $currtime AND $currtime < I.ends AND I.Buy_Price <= I.Currently AND I.Number_of_Bids != 0))")
             elif status == "notStarted":
-                Where.append("I.Ends < $currtime")
+                Where.append("I.Started > $currtime")
 
             values["currtime"] = sqlitedb.getTime()
 
@@ -311,7 +377,7 @@ class search:
             values["category"] = category
 
         query = {
-            "query_string": Select + From + "WHERE " + (" AND ").join(Where) + ";",
+            "query_string": Select + From + "WHERE " + (" AND ").join(Where),
             "values": values
         }
 
@@ -431,7 +497,7 @@ class add_bid:
             return userResult
 
         # check if the bid is open
-        bidOpen = isAuctionOpenForItem(itemID)
+        bidOpen = isAuctionClosedForItem(itemID)
         if bidOpen["error"]:
             return bidOpen
 
