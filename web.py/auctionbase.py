@@ -224,6 +224,10 @@ class search:
 
         query = self.constructQuery(category, description, itemID, minPrice, maxPrice, status)
 
+        result = sqlitedb.query(query["query_string"], query["values"])
+        pprint.pprint(result)
+
+        print("result len is " + str(len(result)))
         print("Query is")
         pprint.pprint(query)
 
@@ -268,8 +272,9 @@ class search:
 
         if category != EMPTY_STRING:
             # Join Condition - Don't have to worry about mutiple because each item belong to each category only once
-            Where.append("C.ItemID == I.ItemID")
+            Where.append("C.ItemID == I.ItemID AND C.Category = $category")
             From = From + ", Categories C "
+            values["category"] = category
 
         query = {
             "query_string": Select + From + "WHERE " + (" AND ").join(Where) + ";",
