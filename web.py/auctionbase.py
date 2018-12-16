@@ -199,14 +199,21 @@ This check whether
 3. buy_price is not met yet
 """
 def isAuctionClosedForItem(itemID):
-    query_string = 'SELECT Started, ends, Buy_Price, Currently FROM ITEMS WHERE ItemID = $itemID'
+    print("Inside isAuctionClosedForItem")
+
+    query_string1 = 'SELECT Started, ends, Buy_Price, Currently FROM ITEMS WHERE ItemID = $itemID'
+    query_string2 = 'SELECT COUNT(*) FROM BIDS WHERE ItemID = $itemID'
 
     values = {
         'itemID': itemID
     }
 
-    result = sqlitedb.query(query_string, values)
+    result = sqlitedb.query(query_string1, values)
+    count = sqlitedb.query(query_string2, values)
+    count = count[0]["COUNT(*)"]
 
+
+    print("count: " + str(count))
     print("result length is " + str(len(result)))
 
     started = string_to_time(result[0].Started)
@@ -229,7 +236,7 @@ def isAuctionClosedForItem(itemID):
         # compare buy_price and currently here
         buy_price = float(buy_price)
         currently = float(currently)
-        if currently >= buy_price:
+        if currently >= buy_price and count != 0:
             return createReturnObject(True, "This item is removed from bidding because buy_price is already been met")
 
     return createReturnObject(False, "Item is open for bidding")
@@ -358,8 +365,8 @@ class search:
 
         if status != "all":
             if status == "open":
-                Where.append("I.Started < $currtime")
-                Where.append("I.Ends > $currtime")
+                Where.append("I.Started <= $currtime")
+                Where.append("I.Ends >= $currtime")
                 Where.append("I.Buy_Price > I.Currently")
             elif status == "close":
                 Where.append("((I.Ends < $currtime) OR (I.Started < $currtime AND $currtime < I.ends AND I.Buy_Price <= I.Currently AND I.Number_of_Bids != 0))")
@@ -509,7 +516,7 @@ class add_bid:
                 'price': price,
                 'currtime': sqlitedb.getTime()
             }
-            sqlitedb.executeInsertionOrDeletionQuery(query_string, values)
+            sqlitedb.executeQuery(query_string, values)
 
         except Exception as e:
             transaction.rollback()
