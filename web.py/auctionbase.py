@@ -116,7 +116,7 @@ def processTriggerErrors(error):
     return createReturnObject(False, "Process errors passed successfully")
 
 def processSQLErrors(error):
-    no2BidsAtSameTime = re.compile(",*UNIQUE constraint failed: Bids.ItemID, Bids.Time.*", re.IGNORECASE)
+    no2BidsAtSameTime = re.compile(".*UNIQUE constraint failed: Bids.ItemID, Bids.Time.*", re.IGNORECASE)
 
     if no2BidsAtSameTime.match(error):
         return createReturnObject(True, "Item cannot have 2 bids at the same time")
@@ -237,7 +237,7 @@ def isAuctionClosedForItem(itemID):
 
 class index:
     def GET(self):
-        return render_template('app_base.html')
+        return render_template('search.html')
 
 
 class item_details:
