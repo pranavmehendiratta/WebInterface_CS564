@@ -122,7 +122,6 @@ def processSQLErrors(error):
     return createReturnObject(True, error)
 
 def isItemPresent(itemID):
-
     retObj = None
 
     query_string = 'SELECT * FROM ITEMS WHERE ITEMID = $itemID'
@@ -140,7 +139,6 @@ def isItemPresent(itemID):
     return retObj
 
 def isUserPresent(userID):
-
     retObj = None
 
     query_string = 'SELECT * FROM USERS WHERE userID = $userID'
@@ -206,6 +204,66 @@ class index:
 class search:
     def GET(self):
         return render_template('search.html')
+
+    def POST(self):
+        post_params = web.input()
+        userID = post_params['userID']
+        itemID = post_params['itemID']
+        minPrice = post_params['minPrice']
+        maxPrice = post_params['maxPrice']
+        status = post_params['status']
+
+        print("userID: " + str(userID) + ", itemID: " + str(itemID) + ", minPrice: " + str(minPrice) + ", maxPrice: " + str(maxPrice) + ", status: " + str(status))
+
+        inputResults = self.validateInputs(userID, itemID, minPrice, maxPrice, status)
+
+        if inputResults["error"]:
+            message = "Error: " + inputResults["msg"]
+            return render_template('search.html', message = message)
+
+        pprint.pprint(inputResults)
+        return render_template('search.html')
+
+
+    def validateInputs(self, userID, itemID, minPrice, maxPrice, status):
+        count = 0
+
+        # Check if userID is valid
+        if userID == EMPTY_STRING:
+            count += 1
+        else:
+            userResults = isUserPresent(userID)
+            if userResults["error"]:
+                return userResults
+
+        # Check if itemID is valid
+        if itemID == EMPTY_STRING:
+            count += 1
+        else:
+            try:
+                itemID = int(itemID)
+                itemResults = isItemPresent(itemID)
+                if itemResults["error"]:
+                    return itemResults
+            except:
+                msg = "itemID = " + itemID + " is incorrect. itemID needs to be an integer"
+                return createReturnObject(True, msg)
+
+        if minPrice == EMPTY_STRING:
+            count += 1
+
+        if maxPrice == EMPTY_STRING:
+            count += 1
+
+        if status == "all":
+            count += 1
+
+        print("count: " + str(count))
+
+        if count == 5:
+            return createReturnObject(True, "Everything is empty. Please enter something to search")
+
+        return createReturnObject(False, "Inputs validated")
 
 class add_bid:
     def GET(self):
@@ -274,9 +332,6 @@ class add_bid:
             transaction.commit()
             return createReturnObject(False, "Bid successfully placed")
 
-
-
-
     def validateInput(self, itemID, userID, price):
         # Check if any of the inputs are None or empty string
         if itemID is None:
@@ -327,9 +382,6 @@ class add_bid:
                 return createReturnObject(True, msg)
 
         return createReturnObject(False, "Inputs are valid")
-
-
-
 
 class curr_time:
     # A simple GET request, to '/currtime'
