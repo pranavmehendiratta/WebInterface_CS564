@@ -59,7 +59,6 @@ def render_template(template_name, **context):
 # URL mapping for the navigation bar till. Need to figure out what to do
 # to the index.html url. It does not show anything as of yet.
 urls = (
-    # TODO: add additional URLs here
     # first parameter => URL, second parameter => class name
     '/currtime', 'curr_time',
     '/selecttime', 'select_time',
@@ -113,7 +112,7 @@ def processTriggerErrors(error):
     if trigger8.match(error):
         return createReturnObject(True, "Unable to update currently to most recent bid using trigger")
 
-    return createReturnObject(False, "Process errors passed successfully")
+    return createReturnObject(True, "There are some errors")
 
 def processSQLErrors(error):
     no2BidsAtSameTime = re.compile(".*UNIQUE constraint failed: Bids.ItemID, Bids.Time.*", re.IGNORECASE)
@@ -238,7 +237,6 @@ def isAuctionClosedForItem(itemID):
 class index:
     def GET(self):
         return render_template('search.html')
-
 
 class item_details:
     def GET(self):
@@ -604,41 +602,31 @@ class select_time:
         yyyy = post_params['yyyy']
         HH = post_params['HH']
         mm = post_params['mm']
-        ss = post_params['ss'];
+        ss = post_params['ss']
         enter_name = post_params['entername']
 
         selected_time = '%s-%s-%s %s:%s:%s' % (yyyy, MM, dd, HH, mm, ss)
         update_message = '(Hello, %s. Previously selected time was: %s.)' % (enter_name, selected_time)
 
-        # TODO: save the selected time as the current time in the database
-        # 1. Delete the current time
-        #delResult = self.deleteCurrentTime();
-        #print("delResult is")
-        #pprint.pprint(delResult)
-
-        # 2. add a new current time
-        #result = self.addCurrTime(selected_time)
-
-        #print("result is")
-        #pprint.pprint(result)
-        #print("update_message: " + update_message)
-
-
-
         transaction = sqlitedb.transaction()
         try:
             query_string = "UPDATE CurrentTime SET time = $selected_time where time = $current_time"
+
+            current_time = sqlitedb.getTime()
+
+            #print("select time query: " + query_string)
+            #print("selected_time type: " + str(type(selected_time)))
+            #print("current_time type: " + str(type(current_time)))
 
             values = {
                 "selected_time": selected_time,
                 "current_time": sqlitedb.getTime()
             }
 
-            sqlitedb.executeInsertionOrDeletionQuery(query_string, values)
-
+            result = sqlitedb.executeQuery(query_string, values)
         except Exception as e:
             transaction.rollback()
-            print(str(e))
+            #print("Inside exception clause in selecttime: " + str(e))
             triggerErrors = processTriggerErrors(str(e))
             update_message = "Error: " + triggerErrors["msg"]
         else:
@@ -647,20 +635,6 @@ class select_time:
         # Here, we assign `update_message' to `message', which means
         # we'll refer to it in our template as `message'
         return render_template('select_time.html', message = update_message)
-
-    # Will delete the current time from the currtime table
-    #def deleteCurrentTime(self):
-    #    current_time = sqlitedb.getTime()
-    #    query_string = 'delete from currenttime where time = $currenttime'
-    #    result = sqlitedb.executeInsertionOrDeletionQuery(query_string, {'currenttime': current_time})
-    #    return result
-
-    #def addCurrTime(self, newCurrTime):
-    #    print("newCurrTime in addCurrTime():" + newCurrTime)
-    #    query_string = 'insert into currenttime values ($time)'
-    #    result = sqlitedb.executeInsertionOrDeletionQuery(query_string, {'time': newCurrTime})
-    #    return result
-
 
 ###########################################################################################
 ##########################DO NOT CHANGE ANYTHING BELOW THIS LINE!##########################
