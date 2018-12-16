@@ -44,7 +44,11 @@
 		<div>
 			<span style="font-weight: bold;">{{ key|e }}</span>
 			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			<span>{{ result[key]|e }}</span>
+			{% if key == 'ItemID' %}
+				<span><a href="/item?id={{ result[key]|e }}" >{{ result[key]|e }}</a></span>
+			{% else %}
+				<span>{{ result[key]|e }}</span>
+			{% endif %}
 		</div>
   	{% endfor %}
   	<div>--------</div>
