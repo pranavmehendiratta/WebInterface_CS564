@@ -207,34 +207,90 @@ class search:
 
     def POST(self):
         post_params = web.input()
-        userID = post_params['userID']
+        category = post_params['category']
+        description = post_params['description']
         itemID = post_params['itemID']
         minPrice = post_params['minPrice']
         maxPrice = post_params['maxPrice']
         status = post_params['status']
 
-        print("userID: " + str(userID) + ", itemID: " + str(itemID) + ", minPrice: " + str(minPrice) + ", maxPrice: " + str(maxPrice) + ", status: " + str(status))
+        print("category: " + str(category) + ", description: " + description + ", itemID: " + str(itemID) + ", minPrice: " + str(minPrice) + ", maxPrice: " + str(maxPrice) + ", status: " + str(status))
 
-        inputResults = self.validateInputs(userID, itemID, minPrice, maxPrice, status)
+        inputResults = self.validateInputs(category, description, itemID, minPrice, maxPrice, status)
 
         if inputResults["error"]:
             message = "Error: " + inputResults["msg"]
             return render_template('search.html', message = message)
 
+        query = self.constructQuery(category, description, itemID, minPrice, maxPrice, status)
+
+        print("Query is")
+        pprint.pprint(query)
+
         pprint.pprint(inputResults)
         return render_template('search.html')
 
+    def constructQuery(self, category, description, itemID, minPrice, maxPrice, status):
+        print("Inside constructQuery")
 
-    def validateInputs(self, userID, itemID, minPrice, maxPrice, status):
+        Select = "SELECT * "
+        From = "FROM Items I "
+        Where = list()
+        values = dict()
+
+        if description != EMPTY_STRING:
+            Where.append("I.Description LIKE $description")
+            values["description"] = "%" + description + "%"
+
+        if itemID != EMPTY_STRING:
+            Where.append("I.itemID = $itemID")
+            values["itemID"] = int(itemID)
+
+        if minPrice != EMPTY_STRING:
+            Where.append("I.Currently >= $minPrice")
+            values["minPrice"] = float(minPrice)
+
+        if maxPrice != EMPTY_STRING:
+            Where.append("I.Currently <= $maxPrice")
+            values["maxPrice"] = float(maxPrice)
+
+        if status != "all":
+            if status == "open":
+                Where.append("I.Started > $currtime")
+                Where.append("I.Ends < $currtime")
+                Where.append("I.Buy_Price > I.Currently")
+            elif status == "close":
+                Where.append("(I.Ends < $currtime OR I.Buy_Price == I.Currently")
+            elif status == "notStarted":
+                Where.append("I.Ends < $currtime")
+
+            values["currtime"] = sqlitedb.getTime()
+
+        if category != EMPTY_STRING:
+            # Join Condition - Don't have to worry about mutiple because each item belong to each category only once
+            Where.append("C.ItemID == I.ItemID")
+            From = From + ", Categories C "
+
+        query = {
+            "query_string": Select + From + "WHERE " + (" AND ").join(Where) + ";",
+            "values": values
+        }
+
+        return query
+
+
+
+
+    def validateInputs(self, category, description, itemID, minPrice, maxPrice, status):
         count = 0
+        NUM_SEARCH_PARAMS = 6
 
         # Check if userID is valid
-        if userID == EMPTY_STRING:
+        if category == EMPTY_STRING:
             count += 1
-        else:
-            userResults = isUserPresent(userID)
-            if userResults["error"]:
-                return userResults
+
+        if description == EMPTY_STRING:
+            count += 1
 
         # Check if itemID is valid
         if itemID == EMPTY_STRING:
@@ -249,18 +305,46 @@ class search:
                 msg = "itemID = " + itemID + " is incorrect. itemID needs to be an integer"
                 return createReturnObject(True, msg)
 
+        # Check if min price is either Empty or int or float
         if minPrice == EMPTY_STRING:
             count += 1
+        else:
+            if "." not in minPrice:
+                try:
+                    minPrice = int(minPrice)
+                except:
+                    msg = "minPrice = " + minPrice + " is incorrect. minPrice needs to be either float or int"
+                    return createReturnObject(True, msg)
+            else:
+                try:
+                    minPrice = float(minPrice)
+                except:
+                    msg = "minPrice = " + minPrice + " is incorrect. minPrice needs to be either float or int"
+                    return createReturnObject(True, msg)
 
+        # Check if max price is either Empty or int or float
         if maxPrice == EMPTY_STRING:
             count += 1
+        else:
+            if "." not in maxPrice:
+                try:
+                    maxPrice = int(maxPrice)
+                except:
+                    msg = "maxPrice = " + maxPrice + " is incorrect. maxPrice needs to be either float or int"
+                    return createReturnObject(True, msg)
+            else:
+                try:
+                    maxPrice = float(maxPrice)
+                except:
+                    msg = "maxPrice = " + maxPrice + " is incorrect. minPrice needs to be either float or int"
+                    return createReturnObject(True, msg)
 
         if status == "all":
             count += 1
 
         print("count: " + str(count))
 
-        if count == 5:
+        if count == NUM_SEARCH_PARAMS:
             return createReturnObject(True, "Everything is empty. Please enter something to search")
 
         return createReturnObject(False, "Inputs validated")
