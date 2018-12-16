@@ -1,0 +1,42 @@
+{% extends "app_base.html" %}
+{% block content %}
+<h3> Item Details </h3>
+<p>
+    {% if details %}
+        {% for key in details %}
+            {% if key == 'Category' %}
+                <p>
+                    <span style="font-weight: bold;">Categories: </span>
+                    {% for key1 in details[key] %}
+                        <span>{{ key1['Category']|e }}, </span>
+                    {% endfor %}
+                </p>
+            {% elif key == 'Bids' %}
+                <p><span style="font-weight: bold;">Bids:</span><br>
+                {% for key1 in details[key] %}
+                    <span style="padding-left: 20px;"></span>
+                    {% for key2 in key1 %}
+                        <span style="font-weight: bold;">{{ key2|e }}: </span>
+                        {% if key2 == 'Amount' %}
+                            <span>${{ key1[key2]|e }}, </span>
+                        {% else %}
+                            <span>{{ key1[key2]|e }}, </span>
+                        {% endif %}
+                    {% endfor %}
+                    <br>
+                {% endfor %}
+                </p>
+            {% elif key == 'Status' %}
+                <p><span style="font-weight: bold;">Status: </span>{{ details[key]['Status'] }}</p>
+                {% if details[key]['Status'] == 'Closed' %}
+                    <p><span style="font-weight: bold;">Winner: </span>{{ details[key]['Winner'] }}</p>
+                {% endif %}
+            {% else %}
+                <p><span style="font-weight: bold;">{{ key }}: </span>{{ details[key]|e }}</p>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</p>
+{% endblock %}
+
+
