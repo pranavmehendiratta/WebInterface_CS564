@@ -155,6 +155,40 @@ def isUserPresent(userID):
 
     return retObj
 
+def isCategoryPresent(category):
+    retObj = None
+
+    query_string = 'SELECT * FROM Categories WHERE Category = $category LIMIT 1'
+    values = {
+        'category': category
+    }
+
+    result = sqlitedb.query(query_string, values)
+
+    if len(result) == 0:
+        retObj = createReturnObject(True, "Category does not exists in the database")
+    else:
+        retObj = createReturnObject(False, "Category exists in the database")
+
+    return retObj
+
+def isDescriptionPresent(description):
+    retObj = None
+
+    query_string = 'SELECT * FROM Items WHERE Description LIKE $description LIMIT 1'
+    values = {
+        'description': "%" + description + "%"
+    }
+
+    result = sqlitedb.query(query_string, values)
+
+    if len(result) == 0:
+        retObj = createReturnObject(True, "Description substring does not exists in the database")
+    else:
+        retObj = createReturnObject(False, "Description substring exists in the database")
+
+    return retObj
+
 """
 This check whether 
 1. currtime > started
@@ -225,14 +259,14 @@ class search:
         query = self.constructQuery(category, description, itemID, minPrice, maxPrice, status)
 
         result = sqlitedb.query(query["query_string"], query["values"])
-        pprint.pprint(result)
+        #pprint.pprint(result)
 
         print("result len is " + str(len(result)))
         print("Query is")
         pprint.pprint(query)
 
         pprint.pprint(inputResults)
-        return render_template('search.html')
+        return render_template('search.html', search_result = result)
 
     def constructQuery(self, category, description, itemID, minPrice, maxPrice, status):
         print("Inside constructQuery")
@@ -283,9 +317,6 @@ class search:
 
         return query
 
-
-
-
     def validateInputs(self, category, description, itemID, minPrice, maxPrice, status):
         count = 0
         NUM_SEARCH_PARAMS = 6
@@ -293,9 +324,17 @@ class search:
         # Check if userID is valid
         if category == EMPTY_STRING:
             count += 1
+        else:
+            categoryResult = isCategoryPresent(category)
+            if categoryResult["error"]:
+                return categoryResult
 
         if description == EMPTY_STRING:
             count += 1
+        else:
+            descriptionResult = isDescriptionPresent(description)
+            if descriptionResult["error"]:
+                return descriptionResult
 
         # Check if itemID is valid
         if itemID == EMPTY_STRING:
