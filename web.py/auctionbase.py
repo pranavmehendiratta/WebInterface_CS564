@@ -84,10 +84,10 @@ def processTriggerErrors(error):
     trigger8 = re.compile(".*Trigger8_Failed.*", re.IGNORECASE)
 
     if trigger1.match(error):
-        return createReturnObject(True, "Some message")
+        return createReturnObject(True, "Cannot set currenttime to time that is backward in time")
 
     if trigger2.match(error):
-        return createReturnObject(True, "Some message")
+        return createReturnObject(True, "Bid should always match system time. This should not be thrown ever.")
 
     if trigger3.match(error):
         return createReturnObject(True, "Any new bid for an item should be greater than previous currently")
@@ -366,33 +366,54 @@ class select_time:
 
         # TODO: save the selected time as the current time in the database
         # 1. Delete the current time
-        delResult = self.deleteCurrentTime();
-        print("delResult is")
-        pprint.pprint(delResult)
+        #delResult = self.deleteCurrentTime();
+        #print("delResult is")
+        #pprint.pprint(delResult)
 
         # 2. add a new current time
-        result = self.addCurrTime(selected_time)
+        #result = self.addCurrTime(selected_time)
 
-        print("result is")
-        pprint.pprint(result)
-        print("update_message: " + update_message)
+        #print("result is")
+        #pprint.pprint(result)
+        #print("update_message: " + update_message)
+
+
+
+        transaction = sqlitedb.transaction()
+        try:
+            query_string = "UPDATE CurrentTime SET time = $selected_time where time = $current_time"
+
+            values = {
+                "selected_time": selected_time,
+                "current_time": sqlitedb.getTime()
+            }
+
+            sqlitedb.executeInsertionOrDeletionQuery(query_string, values)
+
+        except Exception as e:
+            transaction.rollback()
+            print(str(e))
+            triggerErrors = processTriggerErrors(str(e))
+            update_message = "Error: " + triggerErrors["msg"]
+        else:
+            transaction.commit()
 
         # Here, we assign `update_message' to `message', which means
         # we'll refer to it in our template as `message'
         return render_template('select_time.html', message = update_message)
 
     # Will delete the current time from the currtime table
-    def deleteCurrentTime(self):
-        current_time = sqlitedb.getTime()
-        query_string = 'delete from currenttime where time = $currenttime'
-        result = sqlitedb.executeInsertionOrDeletionQuery(query_string, {'currenttime': current_time})
-        return result
+    #def deleteCurrentTime(self):
+    #    current_time = sqlitedb.getTime()
+    #    query_string = 'delete from currenttime where time = $currenttime'
+    #    result = sqlitedb.executeInsertionOrDeletionQuery(query_string, {'currenttime': current_time})
+    #    return result
 
-    def addCurrTime(self, newCurrTime):
-        print("newCurrTime in addCurrTime():" + newCurrTime)
-        query_string = 'insert into currenttime values ($time)'
-        result = sqlitedb.executeInsertionOrDeletionQuery(query_string, {'time': newCurrTime})
-        return result
+    #def addCurrTime(self, newCurrTime):
+    #    print("newCurrTime in addCurrTime():" + newCurrTime)
+    #    query_string = 'insert into currenttime values ($time)'
+    #    result = sqlitedb.executeInsertionOrDeletionQuery(query_string, {'time': newCurrTime})
+    #    return result
 
 
 ###########################################################################################
