@@ -64,9 +64,9 @@ urls = (
     '/currtime', 'curr_time',
     '/selecttime', 'select_time',
     '/', 'index',
-    '/add_bid', 'add_bid',
+    '/addbid', 'add_bid',
     '/search', 'search',
-    '/item_details', 'item_details'
+    '/itemdetails', 'item_details'
 )
 #Constants
 EMPTY_STRING = ""
