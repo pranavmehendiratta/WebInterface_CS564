@@ -124,7 +124,7 @@ def processSQLErrors(error):
     # if unable to figure out the error just throw it
     return createReturnObject(True, error)
 
-def isItemPresent(itemID):
+def isItemNotPresent(itemID):
     retObj = None
 
     query_string = 'SELECT * FROM ITEMS WHERE ITEMID = $itemID'
@@ -135,13 +135,13 @@ def isItemPresent(itemID):
     result = sqlitedb.query(query_string, values)
 
     if len(result) == 0:
-        retObj = createReturnObject(True, "Item does not exists in the database")
+        retObj = createReturnObject(True, "ItemID: " + str(itemID) + " does not exists in the database")
     else:
         retObj = createReturnObject(False, "Item exists in the database")
 
     return retObj
 
-def isUserPresent(userID):
+def isUserNotPresent(userID):
     retObj = None
 
     query_string = 'SELECT * FROM USERS WHERE userID = $userID'
@@ -152,16 +152,16 @@ def isUserPresent(userID):
     result = sqlitedb.query(query_string, values)
 
     if len(result) == 0:
-        retObj = createReturnObject(True, "User does not exists in the database")
+        retObj = createReturnObject(True, "UserID: " + str(userID) + " does not exists in the database")
     else:
         retObj = createReturnObject(False, "User exists in the database")
 
     return retObj
 
-def isCategoryPresent(category):
+def isCategoryNotPresent(category):
     retObj = None
 
-    query_string = 'SELECT * FROM Categories WHERE Category = $category LIMIT 1'
+    query_string = 'SELECT * FROM Categories WHERE UPPER(Category) = UPPER($category) LIMIT 1'
     values = {
         'category': category
     }
@@ -175,10 +175,10 @@ def isCategoryPresent(category):
 
     return retObj
 
-def isDescriptionPresent(description):
+def isDescriptionNotPresent(description):
     retObj = None
 
-    query_string = 'SELECT * FROM Items WHERE Description LIKE $description LIMIT 1'
+    query_string = 'SELECT * FROM Items WHERE UPPER(Description) LIKE UPPER($description) LIMIT 1'
     values = {
         'description': "%" + description + "%"
     }
@@ -341,7 +341,7 @@ class search:
         values = dict()
 
         if description != EMPTY_STRING:
-            Where.append("I.Description LIKE $description")
+            Where.append("UPPER(I.Description) LIKE UPPER($description)")
             values["description"] = "%" + description + "%"
 
         if itemID != EMPTY_STRING:
@@ -370,7 +370,7 @@ class search:
 
         if category != EMPTY_STRING:
             # Join Condition - Don't have to worry about mutiple because each item belong to each category only once
-            Where.append("C.ItemID == I.ItemID AND C.Category = $category")
+            Where.append("C.ItemID = I.ItemID AND UPPER(C.Category) = UPPER($category)")
             From = From + ", Categories C "
             values["category"] = category
 
@@ -389,14 +389,14 @@ class search:
         if category == EMPTY_STRING:
             count += 1
         else:
-            categoryResult = isCategoryPresent(category)
+            categoryResult = isCategoryNotPresent(category)
             if categoryResult["error"]:
                 return categoryResult
 
         if description == EMPTY_STRING:
             count += 1
         else:
-            descriptionResult = isDescriptionPresent(description)
+            descriptionResult = isDescriptionNotPresent(description)
             if descriptionResult["error"]:
                 return descriptionResult
 
@@ -406,7 +406,7 @@ class search:
         else:
             try:
                 itemID = int(itemID)
-                itemResults = isItemPresent(itemID)
+                itemResults = isItemNotPresent(itemID)
                 if itemResults["error"]:
                     return itemResults
             except:
@@ -485,12 +485,12 @@ class add_bid:
             return inputResult
 
         # Check if the itemID exists in the database
-        itemResult = isItemPresent(itemID)
+        itemResult = isItemNotPresent(itemID)
         if itemResult["error"]:
             return itemResult
 
         # check if the user exits in the database
-        userResult = isUserPresent(userID)
+        userResult = isUserNotPresent(userID)
         if userResult["error"]:
             return userResult
 
