@@ -231,7 +231,7 @@ def isAuctionClosedForItem(itemID):
         buy_price = float(buy_price)
         currently = float(currently)
         if currently >= buy_price:
-            return createReturnObject(True, "This item is remove from bidding because buy_price is already been met")
+            return createReturnObject(True, "This item is removed from bidding because buy_price is already been met")
 
     return createReturnObject(False, "Item is open for bidding")
 
