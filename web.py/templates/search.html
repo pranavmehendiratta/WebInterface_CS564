@@ -39,39 +39,18 @@
 <h3>Result</h3>
 <ul>
 {% if search_result %}
-	<table>
-		<TR>
-			<TD><span style="font-weight:bold"> ItemID </span>></TD>
-			<TD><span style="font-weight:bold"> Name </span></TD>
-			<TD><span style="font-weight:bold"> Currently </span>></TD>
-			<TD><span style="font-weight:bold"> First_Bid </span></TD>
-			<TD><span style="font-weight:bold"> Buy_Price </span>></TD>
-			<TD><span style="font-weight:bold"> Number_of_bids </span></TD>
-			<TD><span style="font-weight:bold"> Started </span>></TD>
-			<TD><span style="font-weight:bold"> Ends </span></TD>
-			<TD><span style="font-weight:bold"> Seller_UserID </span>></TD>
-			<TD><span style="font-weight:bold"> Description </span></TD>
-			<TD><span style="font-weight:bold"> Category </span>></TD>
-		</TR>
-	{% for result in search_result %}
-	<TR>
-		<TD>{{ result.ItemID }}</TD>
-		<TD>{{ result.Name }}</TD>
-		<TD>{{ result.Currently }}</TD>
-		<TD>{{ result.First_bid }}</TD>
-		<TD>{{ result.Buy_Price }}</TD>
-		<TD>{{ result.Number_of_Bids }}</TD>
-		<TD>{{ result.Started }}</TD>
-		<TD>{{ result.Ends }}</TD>
-		<TD>{{ result.Seller_UserID }}</TD>
-		<TD>{{ result.Description }}</TD>
-		<TD>{{ result.Category }}</TD>
-	</TR>
-		{% endfor %}
-	</table>
+{% for result in search_result %}
+	{% for key in result %}
+		<div>
+			<span style="font-weight: bold;">{{ key|e }}</span>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<span>{{ result[key]|e }}</span>
+		</div>
+  	{% endfor %}
+  	<div>--------</div>
+{% endfor %}
 {% else %}
 <div>No results</div>
 {% endif %}
 </ul>
-
 {% endblock %}
