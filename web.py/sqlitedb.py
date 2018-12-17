@@ -2,7 +2,7 @@ import web
 import pprint
 
 db = web.database(dbn='sqlite',
-        db='AuctionBase'
+        db='AuctionBase.db'
     )
 
 ######################BEGIN HELPER METHODS######################
