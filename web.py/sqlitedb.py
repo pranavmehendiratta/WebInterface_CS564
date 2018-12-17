@@ -1,6 +1,4 @@
 import web
-import pprint
-
 db = web.database(dbn='sqlite',
         db='AuctionBase.db'
     )
