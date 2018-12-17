@@ -112,7 +112,7 @@ def processTriggerErrors(error):
     if trigger8.match(error):
         return createReturnObject(True, "Unable to update currently to most recent bid using trigger")
 
-    return createReturnObject(True, "There are some errors")
+    return createReturnObject(False, "Passed all trigger checks")
 
 def processSQLErrors(error):
     no2BidsAtSameTime = re.compile(".*UNIQUE constraint failed: Bids.ItemID, Bids.Time.*", re.IGNORECASE)
@@ -199,7 +199,7 @@ This check whether
 3. buy_price is not met yet
 """
 def isAuctionClosedForItem(itemID):
-    print("Inside isAuctionClosedForItem")
+    #print("Inside isAuctionClosedForItem")
 
     query_string1 = 'SELECT Started, ends, Buy_Price, Currently FROM ITEMS WHERE ItemID = $itemID'
     query_string2 = 'SELECT COUNT(*) FROM BIDS WHERE ItemID = $itemID'
@@ -213,8 +213,8 @@ def isAuctionClosedForItem(itemID):
     count = count[0]["COUNT(*)"]
 
 
-    print("count: " + str(count))
-    print("result length is " + str(len(result)))
+    #print("count: " + str(count))
+    #print("result length is " + str(len(result)))
 
     started = string_to_time(result[0].Started)
     ends = string_to_time(result[0].Ends)
@@ -222,8 +222,8 @@ def isAuctionClosedForItem(itemID):
     currently = result[0].Currently
     currTime = string_to_time(sqlitedb.getTime())
 
-    print("currTime: " + str(currTime) + ", startTime: " + str(started) + ", endTime: " + str(ends))
-    print("buy_price: " + str(buy_price) + ", currently: " + str(currently))
+    #print("currTime: " + str(currTime) + ", startTime: " + str(started) + ", endTime: " + str(ends))
+    #print("buy_price: " + str(buy_price) + ", currently: " + str(currently))
 
     if started > currTime:
         return createReturnObject(True, "Cannot bid on an item whose auction has not started yet")
@@ -254,9 +254,9 @@ class item_details:
     def GET(self):
         post_params = web.input()
         itemID = dict(post_params)
-        pprint.pprint(itemID)
+        #pprint.pprint(itemID)
         itemID = int(itemID["itemID"])
-        print("itemID: " + str(itemID))
+        #print("itemID: " + str(itemID))
 
         values = {
             'itemID': itemID
@@ -298,14 +298,14 @@ class item_details:
         itemsResult["Status"] = status
 
 
-        pprint.pprint(categoryResult)
+        #pprint.pprint(categoryResult)
         return render_template('item_details.html', details = itemsResult)
 
     def findWinner(self, bidsResult):
         max = 0
         winner = "None"
         for bid in bidsResult:
-            print(bid)
+            #print(bid)
             if bid["Amount"] > max:
                 max = bid["Amount"]
                 winner = bid["UserID"]
@@ -324,7 +324,7 @@ class search:
         maxPrice = post_params['maxPrice']
         status = post_params['status']
 
-        print("category: " + str(category) + ", description: " + description + ", itemID: " + str(itemID) + ", minPrice: " + str(minPrice) + ", maxPrice: " + str(maxPrice) + ", status: " + str(status))
+        #print("category: " + str(category) + ", description: " + description + ", itemID: " + str(itemID) + ", minPrice: " + str(minPrice) + ", maxPrice: " + str(maxPrice) + ", status: " + str(status))
 
         inputResults = self.validateInputs(category, description, itemID, minPrice, maxPrice, status)
 
@@ -337,15 +337,15 @@ class search:
         result = sqlitedb.query(query["query_string"], query["values"])
         #pprint.pprint(result)
 
-        print("result len is " + str(len(result)))
-        print("Query is")
-        pprint.pprint(query)
+        #print("result len is " + str(len(result)))
+        #print("Query is")
+        #pprint.pprint(query)
 
-        pprint.pprint(inputResults)
+        #pprint.pprint(inputResults)
         return render_template('search.html', search_result = result)
 
     def constructQuery(self, category, description, itemID, minPrice, maxPrice, status):
-        print("Inside constructQuery")
+        #print("Inside constructQuery")
 
         Select = "SELECT * "
         From = "FROM Items I "
@@ -462,7 +462,7 @@ class search:
         if status == "all":
             count += 1
 
-        print("count: " + str(count))
+        #print("count: " + str(count))
 
         if count == NUM_SEARCH_PARAMS:
             return createReturnObject(True, "Everything is empty. Please enter something to search")
@@ -481,8 +481,8 @@ class add_bid:
         retObj = self.tryAddingBid(itemID, userID, price)
 
         # Replacing dummy msg with something that makes sense
-        print("retObj:")
-        pprint.pprint(retObj)
+        #print("retObj:")
+        #pprint.pprint(retObj)
 
         if retObj["error"]:
             return render_template('add_bid.html', message = retObj["msg"])
@@ -525,7 +525,7 @@ class add_bid:
 
         except Exception as e:
             transaction.rollback()
-            print(str(e))
+            #print(str(e))
             triggerErrors = processTriggerErrors(str(e))
 
             if (triggerErrors["error"]):
@@ -571,14 +571,14 @@ class add_bid:
 
         # check if price is either float or integer
         if "." not in price:
-            print("price is of int type")
+            #print("price is of int type")
             try:
                 price = int(price)
             except:
                 msg = "price = " + price + " is incorrect. price needs to be either float or int"
                 return createReturnObject(True, msg)
         else:
-            print("price is of float type")
+            #print("price is of float type")
             try:
                 price = float(price)
             except:
