@@ -6,3 +6,27 @@ select distinct(substr(Items.Started, 0, 11)) AS Started from Items;
 
 Find all unique end dates for auctions
 select distinct(substr(Items.Ends, 0, 11)) AS Started from Items; 
+
+Query for open auctions
+SELECT * FROM Items I WHERE I.Started <= '2001-12-17 12:00:00' AND I.Ends >= '2001-12-17 12:00:00' AND I.Buy_Price IS NULL
+UNION
+SELECT * FROM Items I WHERE I.Started <= '2001-12-17 12:00:00' AND I.Ends >= '2001-12-17 12:00:00' AND I.Buy_Price IS NOT NULL AND I.Number_of_Bids = 0
+UNION
+SELECT * FROM Items I WHERE I.Started <= '2001-12-17 12:00:00' AND I.Ends >= '2001-12-17 12:00:00' AND I.Number_of_Bids > 0 AND I.Buy_Price IS NOT NULL AND I.Buy_Price > I.Currently;
+
+Query for open auctions
+SELECT * FROM Items I WHERE I.Started <= '2001-12-17 12:00:00' AND I.Ends >= '2001-12-17 12:00:00' AND ((I.Buy_Price IS NULL) OR (I.Buy_Price IS NOT NULL AND I.Number_of_Bids = 0) OR (I.Number_of_Bids > 0 AND I.Buy_Price IS NOT NULL AND I.Buy_Price > I.Currently))
+
+Query for closed Auctions
+SELECT * FROM Items I WHERE I.Ends < '2001-12-17 12:00:00' OR (I.Started <= '2001-12-17 12:00:00' AND I.Ends >= '2001-12-17 12:00:00' AND I.Number_of_Bids > 0 AND I.Buy_Price IS NOT NULL AND I.Buy_Price <= I.Currently)
+
+Query for not started auctions
+SELECT * FROM Items I WHERE I.Started > '2001-12-17 12:00:00'
+
+
+
+
+Checking if the queries are correct
+1. SELECT COUNT(I.ItemID) FROM Items I WHERE I.Started > '2001-12-17 12:00:00'; ==> 1055
+2. SELECT COUNT(I.ItemID) FROM Items I WHERE I.Ends < '2001-12-17 12:00:00' OR (I.Started <= '2001-12-17 12:00:00' AND I.Ends >= '2001-12-17 12:00:00' AND I.Number_of_Bids > 0 AND I.Buy_Price IS NOT NULL AND I.Buy_Price <= I.Currently); ==> 5902
+3. SELECT COUNT(I.ItemID) FROM Items I WHERE I.Started <= '2001-12-17 12:00:00' AND I.Ends >= '2001-12-17 12:00:00' AND ((I.Buy_Price IS NULL) OR (I.Buy_Price IS NOT NULL AND I.Number_of_Bids = 0) OR (I.Number_of_Bids > f0 AND I.Buy_Price IS NOT NULL AND I.Buy_Price > I.Currently)); ==> 12575
