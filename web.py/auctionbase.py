@@ -367,9 +367,9 @@ class search:
             if status == "open":
                 Where.append("I.Started <= $currtime")
                 Where.append("I.Ends >= $currtime")
-                Where.append("I.Buy_Price > I.Currently")
+                Where.append("((I.Buy_Price IS NULL) OR (I.Buy_Price IS NOT NULL AND I.Number_of_Bids = 0) OR (I.Number_of_Bids > 0 AND I.Buy_Price IS NOT NULL AND I.Buy_Price > I.Currently))")
             elif status == "close":
-                Where.append("((I.Ends < $currtime) OR (I.Started < $currtime AND $currtime < I.ends AND I.Buy_Price <= I.Currently AND I.Number_of_Bids != 0))")
+                Where.append("((I.Ends < $currtime) OR (I.Started <= $currtime AND $currtime <= I.ends AND I.Buy_Price IS NOT NULL AND I.Buy_Price <= I.Currently AND I.Number_of_Bids > 0))")
             elif status == "notStarted":
                 Where.append("I.Started > $currtime")
 
