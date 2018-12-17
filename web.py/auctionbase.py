@@ -129,7 +129,7 @@ def isItemNotPresent(itemID):
 
     query_string = 'SELECT * FROM ITEMS WHERE ITEMID = $itemID'
     values = {
-        'itemID': itemID
+        'itemID': int(itemID)
     }
 
     result = sqlitedb.query(query_string, values)
@@ -205,7 +205,7 @@ def isAuctionClosedForItem(itemID):
     query_string2 = 'SELECT COUNT(*) FROM BIDS WHERE ItemID = $itemID'
 
     values = {
-        'itemID': itemID
+        'itemID': int(itemID)
     }
 
     result = sqlitedb.query(query_string1, values)
@@ -233,9 +233,14 @@ def isAuctionClosedForItem(itemID):
 
     # cannot check the condition if buy_price is reached or not if buy_price is None
     if buy_price is not None:
+        # if buy_price is not null need to check if any bids for the item exists
+            # if not - then auction cannot be closed
+            # if yes need to check if buy_price is met
+
         # compare buy_price and currently here
         buy_price = float(buy_price)
         currently = float(currently)
+
         if currently >= buy_price and count != 0:
             return createReturnObject(True, "This item is removed from bidding because buy_price is already been met")
 
@@ -360,7 +365,7 @@ class search:
             values["minPrice"] = float(minPrice)
 
         if maxPrice != EMPTY_STRING:
-            Where.append("I.Currently <= $maxPrice")
+            Where.append("I.Currently < $maxPrice")
             values["maxPrice"] = float(maxPrice)
 
         if status != "all":
@@ -511,9 +516,9 @@ class add_bid:
             query_string = 'INSERT INTO BIDS VALUES ($itemID, $userID, $price, $currtime)'
 
             values = {
-                'itemID': itemID,
+                'itemID': int(itemID),
                 'userID': userID,
-                'price': price,
+                'price': float(price),
                 'currtime': sqlitedb.getTime()
             }
             sqlitedb.executeQuery(query_string, values)
